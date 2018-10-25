@@ -15,4 +15,8 @@ Objective
 
 - Support tolerance for matching (e.g. hamming distance, language differences)
 
+  - Or show matches in the order of similarity to the search keys given
+
 - Support `and`, `or` directives somehow
+
+- Don't be too slow (due to file IO)
