@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+
+import sys
+
+def main(argv):
+    if len(argv) is 1:
+        print("\n".join([
+            "Usage: {} [OPTIONS] PATTERN [PATTERN...]".format(argv[0]),
+            "",
+            "ElfSEngine searches for the given PATTERNs within all files in your knowledgebase.",
+            "",
+            "OPTIONS",
+            "\t-h, --help         - Shows this helping message.",
+            "\t-i, --interactive  - Interactively shows each matching file using VIM.",
+            "\t-c, --case         - Turns ON case-sensitiveness.",
+            ]))
+        return 1
+
+    options = {}
+
+    if argv.count("-h") or argv.count("--help"):
+        options["h"] = True
+    if argv.count("-i") or argv.count("--interactive"):
+        options["i"] = True
+    if argv.count("-c") or argv.count("--case"):
+        options["c"] = True
+
+    # Clear options and parameters from argv
+    noops = ["-h", "--help", "-i", "--interactive", "-c", "--case"]
+    for op in noops:
+        while argv.count(op):
+            argv.remove(op)
+
+    # Clear program name (first argument)
+    argv = argv[1:]
+
+    # All remaining arguments are PATTERNs
+    patterns = argv
+
+    print(options)
+    print(patterns)
+
+    return 0
+
+sys.exit( main(sys.argv) )
