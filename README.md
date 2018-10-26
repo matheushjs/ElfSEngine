@@ -20,3 +20,5 @@ Objective
 - Support `and`, `or` directives somehow
 
 - Don't be too slow (due to file IO)
+
+- Support addition of entries editable with VIM
