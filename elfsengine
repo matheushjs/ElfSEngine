@@ -1,45 +1,64 @@
 #!/usr/bin/python3
 
-import sys
+import sys, os
+from os import path
+import subprocess as subp
+
+# Knowledgebase path
+KB_PATH="~/Warehouse/elfsengine/"
+
+def search(files, patterns, options):
+    for f in files:
+        with open(f) as fp:
+            print(fp.read())
 
 def main(argv):
-    if len(argv) is 1:
-        print("\n".join([
-            "Usage: {} [OPTIONS] PATTERN [PATTERN...]".format(argv[0]),
-            "",
-            "ElfSEngine searches for the given PATTERNs within all files in your knowledgebase.",
-            "",
-            "OPTIONS",
-            "\t-h, --help         - Shows this helping message.",
-            "\t-i, --interactive  - Interactively shows each matching file using VIM.",
-            "\t-c, --case         - Turns ON case-sensitiveness.",
-            ]))
-        return 1
+    helpmsg="\n".join([
+                "Usage: {} [OPTIONS] PATTERN [PATTERN...]".format(argv[0]),
+                "",
+                "ElfSEngine searches for the given PATTERNs within all files in your knowledgebase.",
+                "",
+                "OPTIONS",
+                "\t-h, --help         - Shows this helping message.",
+                "\t-i, --interactive  - Interactively shows each matching file using VIM.",
+                "\t-c, --case         - Turns ON case-sensitiveness.",
+            ])
 
     options = {}
 
-    if argv.count("-h") or argv.count("--help"):
-        options["h"] = True
-    if argv.count("-i") or argv.count("--interactive"):
-        options["i"] = True
-    if argv.count("-c") or argv.count("--case"):
-        options["c"] = True
+    options["h"] = True if argv.count("-h") or argv.count("--help") else False
+    options["i"] = True if argv.count("-i") or argv.count("--interactive") else False
+    options["c"] = True if argv.count("-v") or argv.count("--case") else False
+
+    if options["h"] or len(argv) == 1:
+        print(helpmsg)
+        return 1
 
     # Clear options and parameters from argv
     noops = ["-h", "--help", "-i", "--interactive", "-c", "--case"]
     for op in noops:
-        while argv.count(op):
+        while argv.count(op) > 0:
             argv.remove(op)
 
     # Clear program name (first argument)
-    argv = argv[1:]
-
     # All remaining arguments are PATTERNs
-    patterns = argv
+    patterns = argv[1:]
 
-    print(options)
-    print(patterns)
+    # Check knowledebase existence
+    try:
+        os.listdir(path.expanduser(KB_PATH))
+    except FileNotFoundError:
+        print("File {} does not exist. Creating it now.".format(KB_PATH))
+        subp.run(["mkdir", path.expanduser(KB_PATH)])
+
+    # Get all files recursively
+    files = subp.check_output(["find", path.expanduser(KB_PATH), "-type", "f"]) \
+                .decode("utf8") \
+                .strip() \
+                .split("\n")
+
+    search(files, patterns, options)
 
     return 0
 
-sys.exit( main(sys.argv) )
+sys.exit(main(sys.argv))
