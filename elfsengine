@@ -6,11 +6,37 @@ import subprocess as subp
 
 # Knowledgebase path
 KB_PATH="~/Warehouse/elfsengine/"
+KB_PATH_EXP=path.expanduser(KB_PATH)
 
 def search(files, patterns, options):
+    matchedFiles = []
+
     for f in files:
-        with open(f) as fp:
-            print(fp.read())
+        for pat in patterns:
+            print("grep", pat, f)
+
+            try:
+                ret = subp.check_output(["grep", pat, f]).decode("utf8").strip().split("\n")
+
+                if f not in matchedFiles:
+                    matchedFiles.append(f)
+
+                # print returned lines from grep
+                for line in ret:
+                    print("{}:    {}".format(f.replace(KB_PATH_EXP, ""), line))
+
+            except subp.CalledProcessError as e:
+                if(e.returncode != 1):
+                    print("'grep' returned {} on file {}.".format(e.returncode, f))
+
+    # Get file names relative to the knowledgebase directory
+    matchedFilesRel = [f.replace(KB_PATH_EXP, "") for f in matchedFiles]
+
+    print()
+    for f, r in zip(matchedFiles, matchedFilesRel):
+        inp = input("Open {}? [Y/n]".format(r))
+        if inp.lower() == "y":
+            subp.call(["vim", f])
 
 def main(argv):
     helpmsg="\n".join([
@@ -49,10 +75,10 @@ def main(argv):
         os.listdir(path.expanduser(KB_PATH))
     except FileNotFoundError:
         print("File {} does not exist. Creating it now.".format(KB_PATH))
-        subp.run(["mkdir", path.expanduser(KB_PATH)])
+        subp.run(["mkdir", KB_PATH_EXP])
 
     # Get all files recursively
-    files = subp.check_output(["find", path.expanduser(KB_PATH), "-type", "f"]) \
+    files = subp.check_output(["find", KB_PATH_EXP, "-type", "f"]) \
                 .decode("utf8") \
                 .strip() \
                 .split("\n")
