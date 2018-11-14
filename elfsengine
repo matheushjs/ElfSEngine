@@ -3,10 +3,14 @@
 import sys, os
 from os import path
 import subprocess as subp
+import termcolor as tc
 
 # Knowledgebase path
 KB_PATH="~/Warehouse/elfsengine/"
 KB_PATH_EXP=path.expanduser(KB_PATH)
+
+# custom colors
+colorFilename = lambda text: tc.colored(text, "cyan")
 
 # Wrapper for the grep command line utility
 #   args: list of arguments to pass to 'grep' directly. Presence of white space will cause errors.
@@ -45,14 +49,14 @@ def search(files, patterns, options):
 
             # print returned lines from grep
             for line in grepRet:
-                print("{}:    {}".format(f.replace(KB_PATH_EXP, ""), line))
+                print("{}:    {}".format(colorFilename(f.replace(KB_PATH_EXP, "")), line))
 
     # Get file names relative to the knowledgebase directory
     matchedFilesRel = [f.replace(KB_PATH_EXP, "") for f in matchedFiles]
 
     print()
     for f, r in zip(matchedFiles, matchedFilesRel):
-        inp = input("Open {}? [Y/n]".format(r))
+        inp = input("Open {}? [Y/n] ".format(colorFilename(r)))
         if inp.lower() == "y":
             subp.call(["vim", f])
 
