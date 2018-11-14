@@ -11,6 +11,8 @@ KB_PATH_EXP=path.expanduser(KB_PATH)
 
 # custom colors
 colorFilename = lambda text: tc.colored(text, "cyan")
+colorWarning  = lambda text: tc.colored(text, "red", attrs=["bold"])
+colorSuccess  = lambda text: tc.colored(text, "green", attrs=["bold"])
 
 # Wrapper for the grep command line utility
 #   args: list of arguments to pass to 'grep' directly. Presence of white space will cause errors.
@@ -36,29 +38,46 @@ def grep(args=None, **kwargs):
 
     return ret
 
-def search(files, patterns, options):
+def search(patterns, options):
     matchedFiles = []
 
-    for f in files:
-        dashE   = " ".join([ "-e " + patt for patt in patterns ]) + " " + f
-        grepRet = grep(cmd=dashE)
+    dashE   = "-r " + " ".join([ "-e " + patt for patt in patterns ]) + " " + KB_PATH_EXP
+    grepRet = grep(cmd=dashE)
 
-        if grepRet:
-            grepRet = grepRet.strip().split("\n")
-            matchedFiles.append(f)
+    if grepRet:
+        grepRet = grepRet.strip().split("\n")
 
-            # print returned lines from grep
-            for line in grepRet:
-                print("{}:    {}".format(colorFilename(f.replace(KB_PATH_EXP, "")), line))
+        # Print what we found and make a list of files
+        for line in grepRet:
+            idx = line.find(":")
+            filename = line[:idx]
+            match    = line[idx+1:]
+            print("{}:    {}".format(colorFilename(filename.replace(KB_PATH_EXP, "")), match))
+
+            if filename not in matchedFiles:
+                matchedFiles.append(filename)
 
     # Get file names relative to the knowledgebase directory
     matchedFilesRel = [f.replace(KB_PATH_EXP, "") for f in matchedFiles]
 
-    print()
-    for f, r in zip(matchedFiles, matchedFilesRel):
-        inp = input("Open {}? [Y/n] ".format(colorFilename(r)))
-        if inp.lower() == "y":
-            subp.call(["vim", f])
+    print("\nFiles that Matched:")
+    for idx, filename in enumerate(matchedFilesRel):
+        print("\t[{}] - {}".format(idx, colorFilename(filename)))
+
+    while True:
+        try:
+            idx = int(input("\nIndex of file to open? "))
+            subp.call(["vim", matchedFiles[idx]])
+        except ValueError as e: # Input was non-integer
+            break
+        except IndexError as e: # Input was out of bounds
+            print("\n" + colorWarning("Invallid index.") + " Please type something between {}-{}".format(0, len(matchedFilesRel) - 1))
+        except KeyboardInterrupt as e: # User pressed Ctrl + C
+            print()
+            break
+
+    print(colorSuccess("Terminating."))
+    return None
 
 def main(argv):
     helpmsg="\n".join([
@@ -99,13 +118,7 @@ def main(argv):
         print("File {} does not exist. Creating it now.".format(KB_PATH))
         subp.run(["mkdir", KB_PATH_EXP])
 
-    # Get all files recursively
-    files = subp.check_output(["find", KB_PATH_EXP, "-type", "f"]) \
-                .decode("utf8") \
-                .strip() \
-                .split("\n")
-
-    search(files, patterns, options)
+    search(patterns, options)
 
     return 0
 
