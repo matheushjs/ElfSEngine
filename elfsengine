@@ -8,26 +8,44 @@ import subprocess as subp
 KB_PATH="~/Warehouse/elfsengine/"
 KB_PATH_EXP=path.expanduser(KB_PATH)
 
+# Wrapper for the grep command line utility
+#   args: list of arguments to pass to 'grep' directly. Presence of white space will cause errors.
+#   **kwargs:
+#       "cmd": single string with all the arguments to pass to grep
+def grep(args=None, **kwargs):
+    if args:
+        grepArgs = ["grep"] + [i for i in args]
+
+    if "cmd" in kwargs:
+        kwargs["cmd"].replace("\t", " ")    # Convert tabs to whitespace, so we can split
+        grepArgs = ["grep"] + kwargs["cmd"].split(" ")
+
+    ret = None
+
+    try:
+        ret = subp.check_output(grepArgs).decode("utf8")
+    except subp.CalledProcessError as e:
+        if e.returncode == 1: # Pattern not found
+            return None
+        else:
+            print("'grep' returned {}.".format(e.returncode))
+
+    return ret
+
 def search(files, patterns, options):
     matchedFiles = []
 
     for f in files:
-        for pat in patterns:
-            print("grep", pat, f)
+        dashE   = " ".join([ "-e " + patt for patt in patterns ]) + " " + f
+        grepRet = grep(cmd=dashE)
 
-            try:
-                ret = subp.check_output(["grep", pat, f]).decode("utf8").strip().split("\n")
+        if grepRet:
+            grepRet = grepRet.strip().split("\n")
+            matchedFiles.append(f)
 
-                if f not in matchedFiles:
-                    matchedFiles.append(f)
-
-                # print returned lines from grep
-                for line in ret:
-                    print("{}:    {}".format(f.replace(KB_PATH_EXP, ""), line))
-
-            except subp.CalledProcessError as e:
-                if(e.returncode != 1):
-                    print("'grep' returned {} on file {}.".format(e.returncode, f))
+            # print returned lines from grep
+            for line in grepRet:
+                print("{}:    {}".format(f.replace(KB_PATH_EXP, ""), line))
 
     # Get file names relative to the knowledgebase directory
     matchedFilesRel = [f.replace(KB_PATH_EXP, "") for f in matchedFiles]
