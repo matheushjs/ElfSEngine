@@ -18,13 +18,19 @@ colorSuccess  = lambda text: tc.colored(text, "green", attrs=["bold"])
 #   args: list of arguments to pass to 'grep' directly. Presence of white space will cause errors.
 #   **kwargs:
 #       "cmd": single string with all the arguments to pass to grep
+#       "recursive": boolean to add "-r" flag
 def grep(args=None, **kwargs):
+    grepArgs = ["grep"]
+
     if args:
-        grepArgs = ["grep"] + [i for i in args]
+        grepArgs += [i for i in args]
+
+    if "recursive" in kwargs and kwargs["recursive"]:
+        grepArgs += ["-r"]
 
     if "cmd" in kwargs:
         kwargs["cmd"].replace("\t", " ")    # Convert tabs to whitespace, so we can split
-        grepArgs = ["grep"] + kwargs["cmd"].split(" ")
+        grepArgs += kwargs["cmd"].split(" ")
 
     ret = None
 
@@ -41,8 +47,12 @@ def grep(args=None, **kwargs):
 def search(patterns, options):
     matchedFiles = []
 
-    dashE   = "-r " + " ".join([ "-e " + patt for patt in patterns ]) + " " + KB_PATH_EXP
-    grepRet = grep(cmd=dashE)
+    # -e patterns
+    dashE   = " ".join([ "-e " + patt for patt in patterns ])
+    grepRet = grep(
+                cmd="-r " + dashE + " " + KB_PATH_EXP,
+                recursive=True
+            )
 
     if grepRet:
         grepRet = grepRet.strip().split("\n")
@@ -94,15 +104,14 @@ def main(argv):
     options = {}
 
     options["h"] = True if argv.count("-h") or argv.count("--help") else False
-    options["i"] = True if argv.count("-i") or argv.count("--interactive") else False
-    options["c"] = True if argv.count("-v") or argv.count("--case") else False
+    options["i"] = True if argv.count("-i") or argv.count("--case") else False
 
     if options["h"] or len(argv) == 1:
         print(helpmsg)
         return 1
 
     # Clear options and parameters from argv
-    noops = ["-h", "--help", "-i", "--interactive", "-c", "--case"]
+    noops = ["-h", "--help", "-i", "--case"]
     for op in noops:
         while argv.count(op) > 0:
             argv.remove(op)
