@@ -13,6 +13,7 @@ KB_PATH_EXP=path.expanduser(KB_PATH)
 colorFilename = lambda text: tc.colored(text, "cyan")
 colorWarning  = lambda text: tc.colored(text, "red", attrs=["bold"])
 colorSuccess  = lambda text: tc.colored(text, "green", attrs=["bold"])
+colorNeutral  = lambda text: tc.colored(text, "yellow", attrs=["bold"])
 
 # Wrapper for the grep command line utility
 # If return code isn't 0, raise an exception with the code.
@@ -22,8 +23,6 @@ colorSuccess  = lambda text: tc.colored(text, "green", attrs=["bold"])
 #       "file": file or directory with files with which to match (can be list)
 def grep(**kwargs):
     grepArgs = ["grep"]
-
-    print(kwargs)
 
     # All arguments that can be either string or list
     # We convert them to list first
@@ -40,35 +39,39 @@ def grep(**kwargs):
     if "file" in kwargs:
         grepArgs += kwargs["file"]
 
-    try:
-        ret = subp.check_output(grepArgs).decode("utf8")
-    except subp.CalledProcessError as e:
-        print(colorWarning(str(e)))
-        return None
+    ret = subp.check_output(grepArgs).decode("utf8")
 
     return ret
 
 def search(patterns, options):
     matchedFiles = []
 
-    grepRet = grep(
+    try:
+        grepRet = grep(
                 e=patterns,
                 r=True,
                 file=KB_PATH_EXP,
             )
+    except Exception as e:
+        # If no files matched
+        if hasattr(e, "returncode") and e.returncode == 1:
+            print(colorNeutral("No files matched. Terminating."))
+        else: # Any other grep error
+            print(colorWarning(str(e)))
+        return None
 
-    if grepRet:
-        grepRet = grepRet.strip().split("\n")
+    grepRet = grepRet.strip().split("\n")
 
-        # Print what we found and make a list of files
-        for line in grepRet:
-            idx = line.find(":")
-            filename = line[:idx]
-            match    = line[idx+1:]
-            print("{}:    {}".format(colorFilename(filename.replace(KB_PATH_EXP, "")), match))
+    # Print what we found and make a list of files
+    for line in grepRet:
+        # Grep always prints in the format filename:matched_lines
+        idx = line.find(":")    # Find the :
+        filename = line[:idx]   # Get characters before the :
+        match    = line[idx+1:] # Get characters after the :
+        print("{}:    {}".format(colorFilename(filename.replace(KB_PATH_EXP, "")), match))
 
-            if filename not in matchedFiles:
-                matchedFiles.append(filename)
+        if filename not in matchedFiles:
+            matchedFiles.append(filename)
 
     # Get file names relative to the knowledgebase directory
     matchedFilesRel = [f.replace(KB_PATH_EXP, "") for f in matchedFiles]
