@@ -15,43 +15,46 @@ colorWarning  = lambda text: tc.colored(text, "red", attrs=["bold"])
 colorSuccess  = lambda text: tc.colored(text, "green", attrs=["bold"])
 
 # Wrapper for the grep command line utility
-#   args: list of arguments to pass to 'grep' directly. Presence of white space will cause errors.
+# If return code isn't 0, raise an exception with the code.
 #   **kwargs:
-#       "cmd": single string with all the arguments to pass to grep
-#       "recursive": boolean to add "-r" flag
-def grep(args=None, **kwargs):
+#       "e": string to pass as "-e" options (can be list)
+#       "r": boolean for recursive operation
+#       "file": file or directory with files with which to match (can be list)
+def grep(**kwargs):
     grepArgs = ["grep"]
 
-    if args:
-        grepArgs += [i for i in args]
+    print(kwargs)
 
-    if "recursive" in kwargs and kwargs["recursive"]:
+    # All arguments that can be either string or list
+    # We convert them to list first
+    for symbol in ["e", "file"]:
+        if symbol in kwargs and type(kwargs[symbol]) == str:
+            kwargs[symbol] = [ kwargs[symbol] ]
+
+    if "r" in kwargs:
         grepArgs += ["-r"]
 
-    if "cmd" in kwargs:
-        kwargs["cmd"].replace("\t", " ")    # Convert tabs to whitespace, so we can split
-        grepArgs += kwargs["cmd"].split(" ")
+    if "e" in kwargs:
+        [ grepArgs.extend(["-e", i]) for i in kwargs["e"] ]
 
-    ret = None
+    if "file" in kwargs:
+        grepArgs += kwargs["file"]
 
     try:
         ret = subp.check_output(grepArgs).decode("utf8")
     except subp.CalledProcessError as e:
-        if e.returncode == 1: # Pattern not found
-            return None
-        else:
-            print("'grep' returned {}.".format(e.returncode))
+        print(colorWarning(str(e)))
+        return None
 
     return ret
 
 def search(patterns, options):
     matchedFiles = []
 
-    # -e patterns
-    dashE   = " ".join([ "-e " + patt for patt in patterns ])
     grepRet = grep(
-                cmd="-r " + dashE + " " + KB_PATH_EXP,
-                recursive=True
+                e=patterns,
+                r=True,
+                file=KB_PATH_EXP,
             )
 
     if grepRet:
